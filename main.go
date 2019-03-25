@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -29,7 +30,7 @@ func main() {
 		os.Exit(-2)
 	}
 	defer conn.Close()
-	b := make([]byte, 512)
+	b := make([]byte, 4096)
 	for {
 		n, addr, err := conn.ReadFromUDP(b)
 		if err != nil {
@@ -110,8 +111,17 @@ func resolveContainerName(cl *client.Client, name string) ([4]byte, error) {
 	}
 	netInfo, ok := info.NetworkSettings.Networks[string(info.HostConfig.NetworkMode)]
 	if !ok {
-		return [4]byte{}, fmt.Errorf("error getting network info for %s", name)
+		for _, netInfo = range info.NetworkSettings.Networks {
+			ok = true
+			break
+		}
+		if !ok {
+			return [4]byte{}, fmt.Errorf("error getting network info for %s", name)
+		}
 	}
 	ip := net.ParseIP(netInfo.IPAddress).To4()
+	if len(ip) == 0 {
+		return [4]byte{}, errors.New("can't get IP address")
+	}
 	return [4]byte{ip[0], ip[1], ip[2], ip[3]}, nil
 }
