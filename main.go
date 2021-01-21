@@ -15,8 +15,12 @@ import (
 )
 
 func main() {
-	var bindIP, nameSuffix string
+	var (
+		bindIP, nameSuffix string
+		bindPort           int
+	)
 	flag.StringVar(&bindIP, "bind", "127.0.0.127", "ip to bind")
+	flag.IntVar(&bindPort, "port", 5353, "port to bind")
 	flag.StringVar(&nameSuffix, "suffix", "docker", "domain name suffix")
 	flag.Parse()
 	dockerClient, err := client.NewEnvClient()
@@ -24,7 +28,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "can't connect to docker:", err)
 		os.Exit(-1)
 	}
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(bindIP), Port: 53})
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP(bindIP), Port: bindPort})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "can't open socket:", err)
 		os.Exit(-2)
@@ -103,7 +107,7 @@ func replyDNS(msg []byte, cl *client.Client, suffix string) (*dnsmessage.Message
 }
 
 func resolveContainerName(cl *client.Client, name string) ([4]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	info, err := cl.ContainerInspect(ctx, name)
 	if err != nil {
